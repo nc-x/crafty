@@ -5,6 +5,9 @@ import expr, literalType
 type
   AstPrinter = ref object of RootObj
 
+proc newAstPrinter*(): AstPrinter =
+  return AstPrinter()
+
 proc parenthesize(self: AstPrinter, name: string, exprs: varargs[Expr]): string
 
 method print*(self: AstPrinter, expr: Expr): string {.base.}=

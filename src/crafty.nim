@@ -1,12 +1,15 @@
 import os
-import craftypkg / [ error, scanner, token ]
+import craftypkg / [ error, scanner, token, parser, astprinter ]
 
 proc run(source: string) =
   var scanner = newScanner(source)
   var tokens = scanner.scanTokens()
+  var parser = newParser(tokens)
+  var expression = parser.parse()
 
-  for tok in tokens:
-      echo tok
+  if hadError: return
+
+  echo newAstPrinter().print(expression)
 
 proc runFile(path: string) =
   var content = readFile(path)
@@ -18,6 +21,7 @@ proc runPrompt() =
   while true:
     stdout.write "> "
     run(stdin.readLine())
+    hadError = false
 
 proc main() =
   var args = commandLineParams()
