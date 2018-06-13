@@ -1,5 +1,7 @@
 import os
-import craftypkg / [ error, scanner, token, parser, astprinter ]
+import craftypkg / [ error, scanner, token, parser, astprinter, runtimeerror, interpreter ]
+
+let ip = newInterpreter()
 
 proc run(source: string) =
   var scanner = newScanner(source)
@@ -9,13 +11,14 @@ proc run(source: string) =
 
   if hadError: return
 
-  echo newAstPrinter().print(expression)
+  ip.interpret(expression)
 
 proc runFile(path: string) =
   var content = readFile(path)
   run(content)
 
-  if(hadError): quit(65)
+  if hadError: quit(65)
+  if hadRuntimeError: quit(70)
 
 proc runPrompt() =
   while true:

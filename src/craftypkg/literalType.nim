@@ -6,10 +6,10 @@ type
     BoolLit
   
   LiteralType* = object
-    case litKind: LitKind
-    of NumLit: n: float64
-    of StrLit: s: string
-    of BoolLit: b: bool
+    case litKind*: LitKind
+    of NumLit: n*: float64
+    of StrLit: s*: string
+    of BoolLit: b*: bool
     of NilLit: discard
 
 proc newNumLit*(n: float64): LiteralType =
