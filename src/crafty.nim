@@ -7,11 +7,11 @@ proc run(source: string) =
   var scanner = newScanner(source)
   var tokens = scanner.scanTokens()
   var parser = newParser(tokens)
-  var expression = parser.parse()
+  var statements = parser.parse()
 
   if hadError: return
 
-  ip.interpret(expression)
+  ip.interpret(statements)
 
 proc runFile(path: string) =
   var content = readFile(path)

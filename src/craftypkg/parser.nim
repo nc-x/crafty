@@ -4,6 +4,7 @@ import token
 import tokentype
 import expr
 import literaltype
+import stmt
 from error import nil
 
 type
@@ -33,7 +34,10 @@ proc primary(self: var Parser): Expr
 proc consume(self: var Parser, tktype: TokenType, message: string): Token
 proc error(self: var Parser, token: Token, message: string): ParseError
 proc synchronize(self: var Parser)
-proc parse*(self: var Parser): Expr
+proc statement(self: var Parser): Stmt
+proc printStatement(self: var Parser): Stmt
+proc expressionStatement(self: var Parser): Stmt
+proc parse*(self: var Parser): seq[Stmt]
 
 # Proc
 
@@ -155,8 +159,25 @@ proc synchronize(self: var Parser) =
 
     discard advance()
 
-proc parse*(self: var Parser): Expr =
-  try:
-    return expression()
-  except ParseError as error:
-    return nil
+proc statement(self: var Parser): Stmt =
+  if match(PRINT):
+    return printStatement()
+  
+  return expressionStatement()
+
+proc printStatement(self: var Parser): Stmt =
+  var value = expression()
+  discard consume(SEMICOLON, "Expect ';' after value.")
+  return newPrintStmt(value)
+
+proc expressionStatement(self: var Parser): Stmt =
+  var expr = expression()
+  discard consume(SEMICOLON, "Expect ';' after expression.")
+  return newExprStmt(expr)
+
+proc parse*(self: var Parser): seq[Stmt] =
+  var statements: seq[Stmt]
+  while not isAtEnd():
+    statements.add(statement())
+  
+  return statements

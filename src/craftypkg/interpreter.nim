@@ -1,6 +1,7 @@
 {.this: self.}
 
 import expr
+import stmt
 import literaltype
 import tokentype
 import Token
@@ -146,15 +147,23 @@ proc checkNumberOperands(self: Interpreter, operator: Token, left: BaseType, rig
 
   raise newRuntimeError(operator, "Operands must be numbers.")
 
-proc interpret*(self: Interpreter, expression: Expr) =
+method evaluate*(self: Interpreter, stmt: Stmt) {.base.} = discard
+
+method evaluate*(self: Interpreter, stmt: ExprStmt) =
+    discard evaluate(stmt.expression)
+
+method evaluate*(self: Interpreter, stmt: PrintStmt) =
+    var value = evaluate(stmt.expression)
+    echo value
+
+proc interpret*(self: Interpreter, statements: seq[Stmt]) =
   try:
-    var value = evaluate(expression)
-    echo $value
+    for statement in statements:
+      evaluate(statement)
   except RuntimeError as e:
     runtimeError(e)
 
 proc `$`(value: BaseType): string =
-  
   if value of NilType: return "nil"
 
   if value of NumType:
