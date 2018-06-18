@@ -37,6 +37,8 @@ proc synchronize(self: var Parser)
 proc statement(self: var Parser): Stmt
 proc printStatement(self: var Parser): Stmt
 proc expressionStatement(self: var Parser): Stmt
+proc declaration(self: var Parser): Stmt
+proc varDeclaration(self: var Parser): Stmt
 proc parse*(self: var Parser): seq[Stmt]
 
 # Proc
@@ -129,6 +131,9 @@ proc primary(self: var Parser): Expr =
 
   if match(NUMBER, STRING):
     return newLiteral(previous().literal)
+
+  if match(IDENTIFIER):
+    return newVariable(previous())
   
   if match(LEFT_PAREN):
     var expr = expression()
@@ -175,9 +180,31 @@ proc expressionStatement(self: var Parser): Stmt =
   discard consume(SEMICOLON, "Expect ';' after expression.")
   return newExprStmt(expr)
 
+proc declaration(self: var Parser): Stmt =
+  try:
+    if match(VAR):
+      return varDeclaration()
+    return statement()
+  except ParseError:
+    synchronize()
+    return nil
+
+proc varDeclaration(self: var Parser): Stmt =
+  var name = consume(IDENTIFIER, "Expect variable name")
+
+  var initializer: Expr
+  if match(EQUAL):
+    initializer = expression()
+  else:
+    initializer = newLiteral(newNilLit())
+    
+  discard consume(SEMICOLON, "Expect ';' after variable declaration.")
+  return newVarStmt(name, initializer)
+
+
 proc parse*(self: var Parser): seq[Stmt] =
   var statements: seq[Stmt]
   while not isAtEnd():
-    statements.add(statement())
+    statements.add(declaration())
   
   return statements

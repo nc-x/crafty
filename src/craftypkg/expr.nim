@@ -19,6 +19,9 @@ type
     operator*: Token
     right*: Expr
 
+  Variable* = ref object of Expr
+    name*: Token
+
 proc newBinary*(left: Expr, operator: Token, right: Expr): Binary=
   result = Binary(left: left, operator: operator, right: right)
 
@@ -30,3 +33,6 @@ proc newLiteral*(value: LiteralType): Literal=
 
 proc newUnary*(operator: Token, right: Expr): Unary=
   result = Unary(operator: operator, right: right)
+
+proc newVariable*(name: Token): Variable =
+  result = Variable(name: name)

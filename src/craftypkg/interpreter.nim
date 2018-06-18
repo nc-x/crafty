@@ -2,27 +2,17 @@
 
 import expr
 import stmt
+import types
 import literaltype
 import tokentype
 import Token
 import strutils
 import runtimeerror
+import environment
 
 type
   Interpreter* = ref object of RootObj
-
-  BaseType = ref object of RootObj
-
-  NumType = ref object of BaseType
-    value: float64
-
-  StrType = ref object of BaseType
-    value: string
-
-  BoolType = ref object of BaseType
-    value: bool
-  
-  NilType = ref object of BaseType
+    environment: Environment
 
 # Forward Declaration
 proc isTruthy(self: Interpreter, base: BaseType): bool
@@ -34,19 +24,7 @@ proc `$`(value: BaseType): string
 # Proc
 
 proc newInterpreter*(): Interpreter =
-  return Interpreter()
-
-proc newNum(v: float64): NumType =
-  return NumType(value: v)
-
-proc newStr(v: string): StrType =
-  return StrType(value: v)
-
-proc newBool(v: bool): BoolType =
-  return BoolType(value: v)
-
-proc newNil(): NilType =
-  return NilType()
+  return Interpreter(environment: newEnvironment())
 
 method evaluate*(self: Interpreter, expr: Expr): BaseType {.base.}=
   discard
@@ -147,6 +125,9 @@ proc checkNumberOperands(self: Interpreter, operator: Token, left: BaseType, rig
 
   raise newRuntimeError(operator, "Operands must be numbers.")
 
+method evaluate*(self: Interpreter, expr: Variable): BaseType =
+  return environment.get(expr.name)
+
 method evaluate*(self: Interpreter, stmt: Stmt) {.base.} = discard
 
 method evaluate*(self: Interpreter, stmt: ExprStmt) =
@@ -155,6 +136,13 @@ method evaluate*(self: Interpreter, stmt: ExprStmt) =
 method evaluate*(self: Interpreter, stmt: PrintStmt) =
     var value = evaluate(stmt.expression)
     echo value
+
+method evaluate*(self: Interpreter, stmt: VarStmt) =
+  var value: BaseType
+  if stmt.initializer != nil:
+    value = evaluate(stmt.initializer)
+  
+  environment.define(stmt.name.lexeme, value)
 
 proc interpret*(self: Interpreter, statements: seq[Stmt]) =
   try:
