@@ -29,6 +29,12 @@ proc newInterpreter*(): Interpreter =
 method evaluate*(self: Interpreter, expr: Expr): BaseType {.base.}=
   discard
 
+method evaluate*(self: Interpreter, expr: Assign): BaseType =
+  var value = evaluate(expr.value)
+
+  environment.assign(expr.name, value)
+  return value
+
 method evaluate*(self: Interpreter, expr: Literal): BaseType =
   case expr.value.litKind
   of NumLit: return newNum(expr.value.n)

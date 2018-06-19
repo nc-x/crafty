@@ -4,6 +4,10 @@ import literalType
 type
   Expr* = ref object of RootObj
     
+  Assign* = ref object of Expr
+    name*: Token
+    value*: Expr
+
   Binary* = ref object of Expr
     left*: Expr
     operator*: Token
@@ -21,6 +25,9 @@ type
 
   Variable* = ref object of Expr
     name*: Token
+
+proc newAssign*(name: Token, value: Expr): Assign=
+  result = Assign(name: name, value: value)
 
 proc newBinary*(left: Expr, operator: Token, right: Expr): Binary=
   result = Binary(left: left, operator: operator, right: right)

@@ -18,6 +18,7 @@ proc newParser*(tokens: seq[Token]): Parser =
   return Parser(tokens: tokens, current: 0)
 
 # Forward Declaration
+proc assignment(self: var Parser): Expr
 proc expression(self: var Parser): Expr
 proc equality(self: var Parser): Expr
 proc match(self: var Parser, types: varargs[TokenType]): bool
@@ -43,8 +44,23 @@ proc parse*(self: var Parser): seq[Stmt]
 
 # Proc
 
+proc assignment(self: var Parser): Expr =
+  var expr = equality()
+
+  if match(EQUAL):
+    var equals = previous()
+    var value = assignment()
+
+    if expr of Variable:
+      var name = Variable(expr).name
+      return newAssign(name, value)
+    
+    error.error(equals, "Invalid assignment target.")
+
+  return expr
+
 proc expression(self: var Parser): Expr =
-  return equality()
+  return assignment()
 
 proc equality(self: var Parser): Expr =
   var expr = comparison()
