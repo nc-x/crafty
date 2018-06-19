@@ -35,6 +35,7 @@ proc primary(self: var Parser): Expr
 proc consume(self: var Parser, tktype: TokenType, message: string): Token
 proc error(self: var Parser, token: Token, message: string): ParseError
 proc synchronize(self: var Parser)
+proc parseBlock(self: var Parser): seq[Stmt]
 proc statement(self: var Parser): Stmt
 proc printStatement(self: var Parser): Stmt
 proc expressionStatement(self: var Parser): Stmt
@@ -180,10 +181,21 @@ proc synchronize(self: var Parser) =
 
     discard advance()
 
+proc parseBlock(self: var Parser): seq[Stmt] =
+  var statements: seq[Stmt]
+
+  while not check(RIGHT_BRACE) and not isAtEnd():
+    statements.add(declaration())
+
+  discard consume(RIGHT_BRACE, "Expect '}' after block.")
+  return statements
+
 proc statement(self: var Parser): Stmt =
   if match(PRINT):
     return printStatement()
-  
+  if match(LEFT_BRACE):
+    return newBlockStmt(parseBlock())
+
   return expressionStatement()
 
 proc printStatement(self: var Parser): Stmt =

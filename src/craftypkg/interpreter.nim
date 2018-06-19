@@ -20,6 +20,7 @@ proc isEqual(a: BaseType, b: BaseType): bool
 proc checkNumberOperand(self: Interpreter, operator: Token, operand: BaseType)
 proc checkNumberOperands(self: Interpreter, operator: Token, left: BaseType, right: BaseType)
 proc `$`(value: BaseType): string 
+proc executeBlock(self: Interpreter, statements: seq[Stmt], environment: Environment)
 
 # Proc
 
@@ -149,6 +150,18 @@ method evaluate*(self: Interpreter, stmt: VarStmt) =
     value = evaluate(stmt.initializer)
   
   environment.define(stmt.name.lexeme, value)
+
+method evaluate*(self: Interpreter, stmt: BlockStmt) =
+  executeBlock(stmt.statements, newEnvironment(environment))
+
+proc executeBlock(self: Interpreter, statements: seq[Stmt], environment: Environment) =
+  var previous = self.environment
+  try:
+    self.environment = environment
+    for statement in statements:
+      evaluate(statement)
+  finally:
+    self.environment = previous
 
 proc interpret*(self: Interpreter, statements: seq[Stmt]) =
   try:

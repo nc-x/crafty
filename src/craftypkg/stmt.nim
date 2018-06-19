@@ -4,6 +4,9 @@ import token
 type
   Stmt* = ref object of RootObj
     
+  BlockStmt* = ref object of Stmt
+    statements*: seq[Stmt]
+
   ExprStmt* = ref object of Stmt
     expression*: Expr
 
@@ -13,6 +16,9 @@ type
   VarStmt* = ref object of Stmt
     name*: Token
     initializer*: Expr
+
+proc newBlockStmt*(s: seq[Stmt]): BlockStmt =
+  return BlockStmt(statements: s)
 
 proc newExprStmt*(e: Expr): ExprStmt =
   return ExprStmt(expression: e)
