@@ -36,5 +36,6 @@ proc assign*(self: var Environment, name: Token, value: BaseType) =
 
   if enclosing != nil:
     enclosing.assign(name, value)
+    return
   
   raise newRuntimeError(name, "Undefined variable '" & name.lexeme & "'.")
