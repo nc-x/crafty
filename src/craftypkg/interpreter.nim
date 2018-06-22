@@ -47,6 +47,16 @@ method evaluate*(self: Interpreter, expr: Literal): BaseType =
 method evaluate*(self: Interpreter, expr: Grouping): BaseType =
   return evaluate(expr.expression)
 
+method evaluate*(self: Interpreter, expr: Logical): BaseType =
+  var left = evaluate(expr.left)
+
+  if expr.operator.tkType == OR:
+    if isTruthy(left): return left
+  else:
+    if not isTruthy(left): return left
+
+  return evaluate(expr.right)
+
 method evaluate*(self: Interpreter, expr: Unary): BaseType =
   var right = evaluate(expr.right)
 
@@ -140,6 +150,12 @@ method evaluate*(self: Interpreter, stmt: Stmt) {.base.} = discard
 method evaluate*(self: Interpreter, stmt: ExprStmt) =
     discard evaluate(stmt.expression)
 
+method evaluate*(self: Interpreter, stmt: IfStmt) =
+  if isTruthy(evaluate(stmt.condition)):
+    evaluate(stmt.thenBranch)
+  elif stmt.elseBranch != nil:
+    evaluate(stmt.elseBranch)
+
 method evaluate*(self: Interpreter, stmt: PrintStmt) =
     var value = evaluate(stmt.expression)
     echo value
@@ -150,6 +166,10 @@ method evaluate*(self: Interpreter, stmt: VarStmt) =
     value = evaluate(stmt.initializer)
   
   environment.define(stmt.name.lexeme, value)
+
+method evaluate*(self: Interpreter, stmt: WhileStmt) =
+    while isTruthy(evaluate(stmt.condition)):
+      evaluate(stmt.body)
 
 method evaluate*(self: Interpreter, stmt: BlockStmt) =
   executeBlock(stmt.statements, newEnvironment(environment))

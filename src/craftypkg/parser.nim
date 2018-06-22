@@ -18,6 +18,8 @@ proc newParser*(tokens: seq[Token]): Parser =
   return Parser(tokens: tokens, current: 0)
 
 # Forward Declaration
+proc andExpr(self: var Parser): Expr
+proc orExpr(self: var Parser): Expr
 proc assignment(self: var Parser): Expr
 proc expression(self: var Parser): Expr
 proc equality(self: var Parser): Expr
@@ -36,6 +38,9 @@ proc consume(self: var Parser, tktype: TokenType, message: string): Token
 proc error(self: var Parser, token: Token, message: string): ParseError
 proc synchronize(self: var Parser)
 proc parseBlock(self: var Parser): seq[Stmt]
+proc ifStatement(self: var Parser): Stmt
+proc whileStatement(self: var Parser): Stmt
+proc forStatement(self: var Parser): Stmt
 proc statement(self: var Parser): Stmt
 proc printStatement(self: var Parser): Stmt
 proc expressionStatement(self: var Parser): Stmt
@@ -45,8 +50,28 @@ proc parse*(self: var Parser): seq[Stmt]
 
 # Proc
 
-proc assignment(self: var Parser): Expr =
+proc andExpr(self: var Parser): Expr =
   var expr = equality()
+
+  while match(AND):
+    var operator = previous()
+    var right = equality()
+    expr = newLogical(expr, operator, right)
+
+  return expr
+
+proc orExpr(self: var Parser): Expr =
+  var expr = andExpr()
+
+  while match(OR):
+    var operator = previous()
+    var right = andExpr()
+    expr = newLogical(expr, operator, right)
+
+  return expr
+
+proc assignment(self: var Parser): Expr =
+  var expr = orExpr()
 
   if match(EQUAL):
     var equals = previous()
@@ -190,9 +215,72 @@ proc parseBlock(self: var Parser): seq[Stmt] =
   discard consume(RIGHT_BRACE, "Expect '}' after block.")
   return statements
 
+proc ifStatement(self: var Parser): Stmt =
+  discard consume(LEFT_PAREN, "Expect '(' after 'if'.")
+  var condition = expression()
+  discard consume(RIGHT_PAREN, "Expect ')' after if condition.")
+
+  var thenBranch = statement()
+  var elseBranch: Stmt = nil
+
+  if match(ELSE):
+    elseBranch = statement()
+
+  return newIfStmt(condition, thenBranch, elseBranch)
+
+proc whileStatement(self: var Parser): Stmt =
+  discard consume(LEFT_PAREN, "Expect '(' after 'while'.")
+  var condition = expression()
+  discard consume(RIGHT_PAREN, "Expect ')' after condition.")
+  var body = statement()
+
+  return newWhileStmt(condition, body)
+
+proc forStatement(self: var Parser): Stmt =
+  discard consume(LEFT_PAREN, "Expect '(' after 'for'.")
+
+  var initializer: Stmt
+  if match(SEMICOLON):
+    initializer = nil
+  elif match(VAR):
+    initializer = varDeclaration()
+  else:
+    initializer = expressionStatement()
+
+  var condition: Expr = nil
+  if not check(SEMICOLON):
+    condition = expression()
+  
+  discard consume(SEMICOLON, "Expect ';' after loop condition.")
+
+  var increment: Expr = nil
+  if not check(RIGHT_PAREN):
+    increment = expression()
+  discard consume(RIGHT_PAREN, "Expect ')' after for clauses.")
+
+  var body = statement()
+
+  if increment != nil:
+    body = newBlockStmt(@[body, newExprStmt(increment)])
+
+  if condition == nil:
+    condition = newLiteral(newBoolLit(true))
+  body = newWhileStmt(condition, body)
+
+  if initializer != nil:
+    body = newBlockStmt(@[initializer, body])
+
+  return body
+
 proc statement(self: var Parser): Stmt =
+  if match(FOR):
+    return forStatement()
+  if match(IF):
+    return ifStatement()
   if match(PRINT):
     return printStatement()
+  if match(WHILE):
+    return whileStatement()
   if match(LEFT_BRACE):
     return newBlockStmt(parseBlock())
 

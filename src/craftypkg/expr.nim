@@ -19,6 +19,11 @@ type
   Literal* = ref object of Expr
     value*: LiteralType
   
+  Logical* = ref object of Expr
+    left*: Expr
+    operator*: Token
+    right*: Expr
+
   Unary* = ref object of Expr
     operator*: Token
     right*: Expr
@@ -37,6 +42,9 @@ proc newGrouping*(expression: Expr): Grouping=
 
 proc newLiteral*(value: LiteralType): Literal=
   result = Literal(value: value)
+
+proc newLogical*(l: Expr, o: Token, r: Expr): Logical=
+  result = Logical(left: l, operator: o, right: r)
 
 proc newUnary*(operator: Token, right: Expr): Unary=
   result = Unary(operator: operator, right: right)
