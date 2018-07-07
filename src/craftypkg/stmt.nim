@@ -10,6 +10,11 @@ type
   ExprStmt* = ref object of Stmt
     expression*: Expr
 
+  FuncStmt* = ref object of Stmt
+    name*: Token
+    parameters*: seq[Token]
+    body*: seq[Stmt]
+
   IfStmt* = ref object of Stmt
     condition*: Expr
     thenBranch*: Stmt
@@ -34,6 +39,9 @@ proc newExprStmt*(e: Expr): ExprStmt =
 
 proc newIfStmt*(c: Expr, t: Stmt, e: Stmt): IfStmt =
   return IfStmt(condition: c, thenBranch: t, elseBranch: e)
+
+proc newFuncStmt*(n: Token, p: seq[Token], b: seq[Stmt]): FuncStmt =
+  return FuncStmt(name: n, parameters: p, body: b)
 
 proc newPrintStmt*(e: Expr): PrintStmt =
   return PrintStmt(expression: e)

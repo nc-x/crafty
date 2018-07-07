@@ -32,6 +32,7 @@ proc previous(self: var Parser): Token
 proc comparison(self: var Parser): Expr
 proc addition(self: var Parser): Expr
 proc multiplication(self: var Parser): Expr
+proc call(self: var Parser): Expr
 proc unary(self: var Parser): Expr
 proc primary(self: var Parser): Expr
 proc consume(self: var Parser, tktype: TokenType, message: string): Token
@@ -164,7 +165,33 @@ proc unary(self: var Parser): Expr =
 
     return newUnary(operator, right)
 
-  return primary()
+  return call()
+
+proc finishCall(self: var Parser, callee: Expr): Expr =
+  var arguments: seq[Expr]
+
+  if not check(RIGHT_PAREN):
+    arguments.add(expression())
+
+    while match(COMMA):
+      if arguments.len >= 8:
+        error.error(peek(), "Cannot have more than 8 arguments.")
+      arguments.add(expression())
+  
+  var paren = consume(RIGHT_PAREN, "Expect ')' after arguments.")
+
+  return newCall(callee, paren, arguments)
+
+proc call(self: var Parser): Expr =
+  var expr = primary()
+
+  while true:
+    if match(LEFT_PAREN):
+      expr = finishCall(expr)
+    else:
+      break
+
+  return expr
 
 proc primary(self: var Parser): Expr =
   if match(FALSE): return newLiteral(newBoolLit(false))
@@ -296,10 +323,29 @@ proc expressionStatement(self: var Parser): Stmt =
   discard consume(SEMICOLON, "Expect ';' after expression.")
   return newExprStmt(expr)
 
+proc function(self: var Parser, kind: string): FuncStmt =
+  var name = consume(IDENTIFIER, "Expect " & kind & " name.")
+  discard consume(LEFT_PAREN, "Expect '(' after " & kind & " name.")
+
+  var parameters: seq[Token]
+  if not check(RIGHT_PAREN):
+    parameters.add(consume(IDENTIFIER, "Expect parameter name."))
+
+    while match(COMMA):
+      if parameters.len >= 8:
+        error.error(peek(), "Cannot have more than 8 parameters.")
+      parameters.add(consume(IDENTIFIER, "Expect parameter name."))
+    
+  discard consume(RIGHT_PAREN, "Expect ')' after parameters.")
+
+  discard consume(LEFT_BRACE, "Expect '{' before " & kind & " body.")
+  var body = parseBlock()
+  return newFuncStmt(name, parameters, body)
+
 proc declaration(self: var Parser): Stmt =
   try:
-    if match(VAR):
-      return varDeclaration()
+    if match(FUN): return function("function")
+    if match(VAR): return varDeclaration()
     return statement()
   except ParseError:
     synchronize()

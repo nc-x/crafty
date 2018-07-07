@@ -9,10 +9,21 @@ import Token
 import strutils
 import runtimeerror
 import environment
+import sugar
+import times
+
 
 type
   Interpreter* = ref object of RootObj
-    environment: Environment
+    globals*: Environment
+    environment*: Environment
+
+  FuncType* = ref object of BaseType
+    arity*: () -> int
+    call*: (Interpreter, seq[BaseType]) -> BaseType
+
+  Function* = ref object of FuncType
+    declaration*: FuncStmt
 
 # Forward Declaration
 proc isTruthy(self: Interpreter, base: BaseType): bool
@@ -24,8 +35,32 @@ proc executeBlock(self: Interpreter, statements: seq[Stmt], environment: Environ
 
 # Proc
 
+proc newFuncType*(arity: () -> int, call: (Interpreter, seq[BaseType]) -> BaseType): FuncType =
+  FuncType(arity: arity, call: call)
+
+proc newFunction*(d: FuncStmt): Function =
+  var f = Function()
+  f.declaration = d
+  f.call = 
+    proc(interpreter: Interpreter, arguments: seq[BaseType]): BaseType =
+      var environment = newEnvironment(interpreter.globals)
+      for i in 0 ..< f.declaration.parameters.len:
+        environment.define(f.declaration.parameters[i].lexeme, arguments[i]) 
+      
+      interpreter.executeBlock(f.declaration.body, environment)
+      return nil
+  f.arity =
+    proc(): int = return f.declaration.parameters.len
+
+  return f
+
 proc newInterpreter*(): Interpreter =
-  return Interpreter(environment: newEnvironment())
+  var globals = newEnvironment()
+  globals.define("clock", newFuncType(
+    () => 0,
+    (Interpreter, seq[BaseType] -> BaseType) => newStr(getClockStr())
+  ))
+  return Interpreter(globals: globals, environment: globals)
 
 method evaluate*(self: Interpreter, expr: Expr): BaseType {.base.}=
   discard
@@ -142,6 +177,21 @@ proc checkNumberOperands(self: Interpreter, operator: Token, left: BaseType, rig
 
   raise newRuntimeError(operator, "Operands must be numbers.")
 
+method evaluate*(self: Interpreter, expr: Call): BaseType =
+  var callee = evaluate(expr.callee)
+
+  var arguments: seq[BaseType]
+  for argument in expr.arguments:
+    arguments.add(self.evaluate(argument))
+  
+  if not(callee of FuncType):
+    raise newRuntimeError(expr.paren, "Can only call functions and classes.")
+
+  var function = FuncType(callee)
+  if arguments.len != function.arity():
+    raise newRuntimeError(expr.paren, "Expected " & $function.arity() & " arguments but got " & $arguments.len & ".")
+  return function.call(self, arguments)
+
 method evaluate*(self: Interpreter, expr: Variable): BaseType =
   return environment.get(expr.name)
 
@@ -159,6 +209,10 @@ method evaluate*(self: Interpreter, stmt: IfStmt) =
 method evaluate*(self: Interpreter, stmt: PrintStmt) =
     var value = evaluate(stmt.expression)
     echo value
+
+method evaluate*(self: Interpreter, stmt: FuncStmt) =
+  var function = newFunction(stmt)
+  environment.define(stmt.name.lexeme, function)
 
 method evaluate*(self: Interpreter, stmt: VarStmt) =
   var value: BaseType
@@ -204,3 +258,6 @@ proc `$`(value: BaseType): string =
   
   if value of BoolType:
     return $BoolType(value).value
+
+  if value of Function:
+    return "<fn " & Function(value).declaration.name.lexeme & ">"

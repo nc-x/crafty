@@ -13,6 +13,11 @@ type
     operator*: Token
     right*: Expr
 
+  Call* = ref object of Expr
+    callee*: Expr
+    paren*: Token
+    arguments*: seq[Expr]
+
   Grouping* = ref object of Expr
     expression*: Expr
   
@@ -36,6 +41,9 @@ proc newAssign*(name: Token, value: Expr): Assign=
 
 proc newBinary*(left: Expr, operator: Token, right: Expr): Binary=
   result = Binary(left: left, operator: operator, right: right)
+
+proc newCall*(callee: Expr, paren: Token, arguments: seq[Expr]): Call=
+  result = Call(callee: callee, paren: paren, arguments: arguments)
 
 proc newGrouping*(expression: Expr): Grouping=
   result = Grouping(expression: expression)
