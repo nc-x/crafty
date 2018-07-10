@@ -24,6 +24,7 @@ type
 
   Function* = ref object of FuncType
     declaration*: FuncStmt
+    closure*: Environment
 
 # Forward Declaration
 proc isTruthy(self: Interpreter, base: BaseType): bool
@@ -38,12 +39,13 @@ proc executeBlock(self: Interpreter, statements: seq[Stmt], environment: Environ
 proc newFuncType*(arity: () -> int, call: (Interpreter, seq[BaseType]) -> BaseType): FuncType =
   FuncType(arity: arity, call: call)
 
-proc newFunction*(d: FuncStmt): Function =
+proc newFunction*(declaration: FuncStmt, closure: Environment): Function =
   var f = Function()
-  f.declaration = d
+  f.closure = closure
+  f.declaration = declaration
   f.call = 
     proc(interpreter: Interpreter, arguments: seq[BaseType]): BaseType =
-      var environment = newEnvironment(interpreter.globals)
+      var environment = newEnvironment(f.closure)
       for i in 0 ..< f.declaration.parameters.len:
         environment.define(f.declaration.parameters[i].lexeme, arguments[i]) 
       try:
@@ -213,7 +215,7 @@ method evaluate*(self: Interpreter, stmt: PrintStmt) =
     echo value
 
 method evaluate*(self: Interpreter, stmt: FuncStmt) =
-  var function = newFunction(stmt)
+  var function = newFunction(stmt, environment)
   environment.define(stmt.name.lexeme, function)
 
 method evaluate*(self: Interpreter, stmt: ReturnStmt) =
