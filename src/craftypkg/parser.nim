@@ -299,6 +299,15 @@ proc forStatement(self: var Parser): Stmt =
 
   return body
 
+proc returnStatement(self: var Parser): Stmt =
+  var keyword = previous()
+  var value: Expr
+  if not check(SEMICOLON):
+    value = expression()
+  
+  discard consume(SEMICOLON, "Expect ';' after return value.")
+  return newReturnStmt(keyword, value)
+
 proc statement(self: var Parser): Stmt =
   if match(FOR):
     return forStatement()
@@ -306,6 +315,8 @@ proc statement(self: var Parser): Stmt =
     return ifStatement()
   if match(PRINT):
     return printStatement()
+  if match(RETURN):
+    return returnStatement()
   if match(WHILE):
     return whileStatement()
   if match(LEFT_BRACE):

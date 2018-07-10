@@ -23,6 +23,10 @@ type
   PrintStmt* = ref object of Stmt
     expression*: Expr
 
+  ReturnStmt* = ref object of Stmt
+    keyword*: Token
+    value*: Expr
+
   VarStmt* = ref object of Stmt
     name*: Token
     initializer*: Expr
@@ -45,6 +49,9 @@ proc newFuncStmt*(n: Token, p: seq[Token], b: seq[Stmt]): FuncStmt =
 
 proc newPrintStmt*(e: Expr): PrintStmt =
   return PrintStmt(expression: e)
+
+proc newReturnStmt*(k: Token, v: Expr): ReturnStmt =
+  return ReturnStmt(keyword: k, value: v)
 
 proc newVarStmt*(n: Token, i: Expr): VarStmt =
   return VarStmt(name: n, initializer: i)

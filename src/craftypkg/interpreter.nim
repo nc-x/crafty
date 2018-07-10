@@ -11,7 +11,7 @@ import runtimeerror
 import environment
 import sugar
 import times
-
+import returnexception
 
 type
   Interpreter* = ref object of RootObj
@@ -46,8 +46,10 @@ proc newFunction*(d: FuncStmt): Function =
       var environment = newEnvironment(interpreter.globals)
       for i in 0 ..< f.declaration.parameters.len:
         environment.define(f.declaration.parameters[i].lexeme, arguments[i]) 
-      
-      interpreter.executeBlock(f.declaration.body, environment)
+      try:
+        interpreter.executeBlock(f.declaration.body, environment)
+      except ReturnException as r:
+        return r.value
       return nil
   f.arity =
     proc(): int = return f.declaration.parameters.len
@@ -213,6 +215,12 @@ method evaluate*(self: Interpreter, stmt: PrintStmt) =
 method evaluate*(self: Interpreter, stmt: FuncStmt) =
   var function = newFunction(stmt)
   environment.define(stmt.name.lexeme, function)
+
+method evaluate*(self: Interpreter, stmt: ReturnStmt) =
+    var value: BaseType
+    if stmt.value != nil:
+      value = evaluate(stmt.value)
+    raise newReturnException(value)
 
 method evaluate*(self: Interpreter, stmt: VarStmt) =
   var value: BaseType
