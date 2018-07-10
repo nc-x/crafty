@@ -369,7 +369,7 @@ proc varDeclaration(self: var Parser): Stmt =
   if match(EQUAL):
     initializer = expression()
   else:
-    initializer = newLiteral(newNilLit())
+    initializer = nil
     
   discard consume(SEMICOLON, "Expect ';' after variable declaration.")
   return newVarStmt(name, initializer)

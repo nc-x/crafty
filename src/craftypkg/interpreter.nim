@@ -12,12 +12,12 @@ import environment
 import sugar
 import times
 import returnexception
+import tables
+import resolver
+import interpreterObj
+import objhashes
 
 type
-  Interpreter* = ref object of RootObj
-    globals*: Environment
-    environment*: Environment
-
   FuncType* = ref object of BaseType
     arity*: () -> int
     call*: (Interpreter, seq[BaseType]) -> BaseType
@@ -35,7 +35,6 @@ proc `$`(value: BaseType): string
 proc executeBlock(self: Interpreter, statements: seq[Stmt], environment: Environment)
 
 # Proc
-
 proc newFuncType*(arity: () -> int, call: (Interpreter, seq[BaseType]) -> BaseType): FuncType =
   FuncType(arity: arity, call: call)
 
@@ -64,7 +63,7 @@ proc newInterpreter*(): Interpreter =
     () => 0,
     (Interpreter, seq[BaseType] -> BaseType) => newStr(getClockStr())
   ))
-  return Interpreter(globals: globals, environment: globals)
+  return Interpreter(globals: globals, environment: globals, locals: initTable[Expr, int]())
 
 method evaluate*(self: Interpreter, expr: Expr): BaseType {.base.}=
   discard
@@ -72,7 +71,12 @@ method evaluate*(self: Interpreter, expr: Expr): BaseType {.base.}=
 method evaluate*(self: Interpreter, expr: Assign): BaseType =
   var value = evaluate(expr.value)
 
-  environment.assign(expr.name, value)
+  if locals.contains(expr):
+    var distance = locals[expr]
+    environment.assignAt(distance, expr.name, value)
+  else:
+    globals.assign(expr.name, value)
+    
   return value
 
 method evaluate*(self: Interpreter, expr: Literal): BaseType =
@@ -196,8 +200,15 @@ method evaluate*(self: Interpreter, expr: Call): BaseType =
     raise newRuntimeError(expr.paren, "Expected " & $function.arity() & " arguments but got " & $arguments.len & ".")
   return function.call(self, arguments)
 
+proc lookUpVariable(self: Interpreter, name: Token, expr: Expr): BaseType =
+  if locals.contains(expr):
+    var distance = locals[expr]
+    return environment.getAt(distance, name.lexeme)
+  else:
+    return globals.get(name)
+
 method evaluate*(self: Interpreter, expr: Variable): BaseType =
-  return environment.get(expr.name)
+  return lookUpVariable(expr.name, expr)
 
 method evaluate*(self: Interpreter, stmt: Stmt) {.base.} = discard
 
@@ -219,13 +230,13 @@ method evaluate*(self: Interpreter, stmt: FuncStmt) =
   environment.define(stmt.name.lexeme, function)
 
 method evaluate*(self: Interpreter, stmt: ReturnStmt) =
-    var value: BaseType
+    var value: BaseType = nil
     if stmt.value != nil:
       value = evaluate(stmt.value)
     raise newReturnException(value)
 
 method evaluate*(self: Interpreter, stmt: VarStmt) =
-  var value: BaseType
+  var value: BaseType = nil
   if stmt.initializer != nil:
     value = evaluate(stmt.initializer)
   

@@ -1,5 +1,5 @@
 import os
-import craftypkg / [ error, scanner, token, parser, astprinter, runtimeerror, interpreter ]
+import craftypkg / [ error, scanner, token, parser, astprinter, runtimeerror, interpreter, resolver ]
 
 let ip = newInterpreter()
 
@@ -8,6 +8,11 @@ proc run(source: string) =
   var tokens = scanner.scanTokens()
   var parser = newParser(tokens)
   var statements = parser.parse()
+
+  if hadError: return
+
+  var resolver = newResolver(ip)
+  resolver.resolve(statements)
 
   if hadError: return
 
