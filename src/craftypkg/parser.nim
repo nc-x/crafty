@@ -207,6 +207,12 @@ proc primary(self: var Parser): Expr =
   if match(NUMBER, STRING):
     return newLiteral(previous().literal)
 
+  if match(SUPER):
+    var keyword = previous()
+    discard consume(DOT, "Expect '.' after 'super'.")
+    var m = consume(IDENTIFIER, "Expect superclass method name.")
+    return newSuperExpr(keyword, m)
+
   if match(THIS):
     return newThisExpr(previous())
 
@@ -364,6 +370,12 @@ proc function(self: var Parser, kind: string): FuncStmt =
 
 proc classDeclaration(self: var Parser): Stmt =
   var name = consume(IDENTIFIER, "Expect class name.")
+
+  var superclass: Variable = nil
+  if match(LESS):
+    discard consume(IDENTIFIER, "Expect superclass name.")
+    superclass = newVariable(previous())
+
   discard consume(LEFT_BRACE, "Expect '{' before class body.")
 
   var methods: seq[FuncStmt]
@@ -372,7 +384,7 @@ proc classDeclaration(self: var Parser): Stmt =
 
   discard consume(RIGHT_BRACE, "Expect '}' after class body.")
 
-  return newClassStmt(name, methods)
+  return newClassStmt(name, superclass, methods)
 
 proc declaration(self: var Parser): Stmt =
   try:

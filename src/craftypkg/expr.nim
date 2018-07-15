@@ -48,6 +48,10 @@ type
   ThisExpr* = ref object of Expr
     keyword*: Token
 
+  SuperExpr* = ref object of Expr
+    keyword*: Token
+    `method`*: Token
+
 proc newAssign*(name: Token, value: Expr): Assign=
   result = Assign(name: name, value: value)
 
@@ -80,3 +84,6 @@ proc newVariable*(name: Token): Variable =
 
 proc newThisExpr*(k: Token): ThisExpr =
   result = ThisExpr(keyword: k)
+
+proc newSuperExpr*(k: Token, m: Token): SuperExpr =
+  result = SuperExpr(keyword: k, `method`: m)

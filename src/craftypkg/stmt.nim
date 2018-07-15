@@ -9,6 +9,7 @@ type
 
   ClassStmt* = ref object of Stmt
     name*: Token
+    superclass*: Variable
     methods*: seq[FuncStmt]
 
   ExprStmt* = ref object of Stmt
@@ -42,8 +43,8 @@ type
 proc newBlockStmt*(s: seq[Stmt]): BlockStmt =
   return BlockStmt(statements: s)
 
-proc newClassStmt*(n: Token, m: seq[FuncStmt]): ClassStmt =
-  return ClassStmt(name: n, methods: m)
+proc newClassStmt*(n: Token, s: Variable, m: seq[FuncStmt]): ClassStmt =
+  return ClassStmt(name: n, superclass: s, methods: m)
 
 proc newExprStmt*(e: Expr): ExprStmt =
   return ExprStmt(expression: e)

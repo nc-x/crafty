@@ -29,6 +29,7 @@ type
 
   ClassType* = ref object of FuncType
     name*: string
+    superclass: ClassType
     methods*: Table[string, Function]
 
   ClassInstance* = ref object of BaseType
@@ -56,6 +57,10 @@ proc `bind`(self: Function, instance: ClassInstance): Function =
 proc findMethod(self: ClassType, instance: ClassInstance, name: string): Function =
   if methods.contains(name):
     return methods[name].`bind`(instance)
+
+  if superclass != nil:
+    return superclass.findMethod(instance, name)
+
   return nil
 
 proc get*(self: ClassInstance, name: Token): BaseType =
@@ -72,8 +77,9 @@ proc set*(self: ClassInstance, name: Token, value: BaseType) =
     fields.del(name.lexeme)
   fields.add(name.lexeme, value)
 
-proc newClass*(n: string, m: Table[string, Function]): ClassType =
+proc newClass*(n: string, superclass: ClassType, m: Table[string, Function]): ClassType =
   var c = ClassType(name: n, methods: m)
+  c.superclass = superclass
   c.call = 
     proc(interpreter: Interpreter, arguments: seq[BaseType]): BaseType =
       var instance = newClassInstance(c)
@@ -283,6 +289,18 @@ method evaluate*(self: Interpreter, expr: SetExpr): BaseType =
   ClassInstance(obj).set(expr.name, value)
   return value
 
+method evaluate*(self: Interpreter, expr: SuperExpr): BaseType =
+  var distance = locals[expr]
+  var superclass = ClassType(environment.getAt(distance, "super"))
+
+  var obj = ClassInstance(environment.getAt(distance-1, "this"))
+
+  var `method` = superclass.findMethod(obj, expr.method.lexeme)
+  if `method` == nil:
+    raise newRuntimeError(expr.method, "Undefined property '" & expr.`method`.lexeme & '.')
+
+  return `method`
+
 method evaluate*(self: Interpreter, expr: ThisExpr): BaseType =
   return lookUpVariable(expr.keyword, expr)
 
@@ -323,7 +341,17 @@ method evaluate*(self: Interpreter, stmt: WhileStmt) =
       evaluate(stmt.body)
 
 method evaluate*(self: Interpreter, stmt: ClassStmt) =
+    var superclass: BaseType = nil
+    if stmt.superclass != nil:
+      superclass = evaluate(stmt.superclass)
+      if not (superclass of ClassType):
+        raise newRuntimeError(stmt.superclass.name, "Superclass must be a class.")
+
     environment.define(stmt.name.lexeme, nil)
+
+    if stmt.superclass != nil:
+      environment = newEnvironment(environment)
+      environment.define("super", superclass)
 
     var methods = initTable[string, Function]()
     for m in stmt.methods:
@@ -331,7 +359,11 @@ method evaluate*(self: Interpreter, stmt: ClassStmt) =
       if methods.contains(m.name.lexeme): methods.del(m.name.lexeme)
       methods.add(m.name.lexeme, function)
 
-    var class = newClass(stmt.name.lexeme, methods)
+    var class = newClass(stmt.name.lexeme, ClassType(superclass), methods)
+    
+    if superclass != nil:
+      environment = environment.enclosing
+    
     environment.assign(stmt.name, class)
 
 method evaluate*(self: Interpreter, stmt: BlockStmt) =

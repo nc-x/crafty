@@ -20,7 +20,7 @@ type
     NONE, FUNCTION, INITIALIZER, METHOD
 
   ClassType {.pure.} = enum
-    NONE, CLASS
+    NONE, CLASS, SUBCLASS
 
 proc newResolver*(i: Interpreter): Resolver =
   Resolver(interpreter: i, currentFunction: NONE, currentClass: ClassType.NONE)
@@ -118,7 +118,16 @@ method resolve(self: var Resolver, stmt: ClassStmt) =
   var enclosingClass = currentClass
   currentClass = ClassType.CLASS
   declare(stmt.name)
+
+  if stmt.superclass != nil:
+    currentClass = ClassType.SUBCLASS
+    resolve(stmt.superclass)
+
   define(stmt.name)
+
+  if stmt.superclass != nil:
+    beginScope()
+    scopes[scopes.len-1].add("super", true)
 
   beginScope()
   scopes[scopes.len-1].add("this", true)
@@ -130,6 +139,9 @@ method resolve(self: var Resolver, stmt: ClassStmt) =
     resolveFunction(m, declaration)
   
   endScope()
+
+  if stmt.superclass != nil: endScope()
+
   currentClass = enclosingClass
 
 method resolve(self: var Resolver, expr: Binary) =
@@ -164,4 +176,11 @@ method resolve(self: var Resolver, expr: SetExpr) =
 method resolve(self: var Resolver, expr: ThisExpr) =
   if currentClass == ClassType.NONE:
     error.error(expr.keyword, "Cannot use 'this' outside of a class.")
+  resolveLocal(expr, expr.keyword)
+
+method resolve(self: var Resolver, expr: SuperExpr) =
+  if currentClass == ClassType.NONE:
+    error.error(expr.keyword, "Cannot use 'super' outside of a class.")
+  elif currentClass != ClassType.SUBCLASS:
+    error.error(expr.keyword, "Cannot use 'super' in a class with no superclass.")
   resolveLocal(expr, expr.keyword)
