@@ -18,6 +18,15 @@ type
     paren*: Token
     arguments*: seq[Expr]
 
+  GetExpr* = ref object of Expr
+    obj*: Expr
+    name*: Token
+
+  SetExpr* = ref object of Expr
+    obj*: Expr
+    name*: Token
+    value*: Expr
+
   Grouping* = ref object of Expr
     expression*: Expr
   
@@ -36,6 +45,9 @@ type
   Variable* = ref object of Expr
     name*: Token
 
+  ThisExpr* = ref object of Expr
+    keyword*: Token
+
 proc newAssign*(name: Token, value: Expr): Assign=
   result = Assign(name: name, value: value)
 
@@ -44,6 +56,12 @@ proc newBinary*(left: Expr, operator: Token, right: Expr): Binary=
 
 proc newCall*(callee: Expr, paren: Token, arguments: seq[Expr]): Call=
   result = Call(callee: callee, paren: paren, arguments: arguments)
+
+proc newGetExpr*(o: Expr, n: Token): GetExpr=
+  result = GetExpr(obj: o, name: n)
+
+proc newSetExpr*(o: Expr, n: Token, v: Expr): SetExpr=
+  result = SetExpr(obj: o, name: n, value: v)
 
 proc newGrouping*(expression: Expr): Grouping=
   result = Grouping(expression: expression)
@@ -59,3 +77,6 @@ proc newUnary*(operator: Token, right: Expr): Unary=
 
 proc newVariable*(name: Token): Variable =
   result = Variable(name: name)
+
+proc newThisExpr*(k: Token): ThisExpr =
+  result = ThisExpr(keyword: k)

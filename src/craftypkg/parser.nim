@@ -81,6 +81,9 @@ proc assignment(self: var Parser): Expr =
     if expr of Variable:
       var name = Variable(expr).name
       return newAssign(name, value)
+    elif expr of GetExpr:
+      var get = GetExpr(expr)
+      return newSetExpr(get.obj, get.name, value)
     
     error.error(equals, "Invalid assignment target.")
 
@@ -188,6 +191,9 @@ proc call(self: var Parser): Expr =
   while true:
     if match(LEFT_PAREN):
       expr = finishCall(expr)
+    elif match(DOT):
+      var name = consume(IDENTIFIER, "Expect property name after '.'.")
+      expr = newGetExpr(expr, name)
     else:
       break
 
@@ -200,6 +206,9 @@ proc primary(self: var Parser): Expr =
 
   if match(NUMBER, STRING):
     return newLiteral(previous().literal)
+
+  if match(THIS):
+    return newThisExpr(previous())
 
   if match(IDENTIFIER):
     return newVariable(previous())
@@ -353,8 +362,21 @@ proc function(self: var Parser, kind: string): FuncStmt =
   var body = parseBlock()
   return newFuncStmt(name, parameters, body)
 
+proc classDeclaration(self: var Parser): Stmt =
+  var name = consume(IDENTIFIER, "Expect class name.")
+  discard consume(LEFT_BRACE, "Expect '{' before class body.")
+
+  var methods: seq[FuncStmt]
+  while not check(RIGHT_BRACE) and not isAtEnd():
+    methods.add(function("method"))
+
+  discard consume(RIGHT_BRACE, "Expect '}' after class body.")
+
+  return newClassStmt(name, methods)
+
 proc declaration(self: var Parser): Stmt =
   try:
+    if match(CLASS): return classDeclaration()
     if match(FUN): return function("function")
     if match(VAR): return varDeclaration()
     return statement()

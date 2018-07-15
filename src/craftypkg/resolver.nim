@@ -14,12 +14,16 @@ type
     interpreter: Interpreter
     scopes: seq[Table[string, bool]]
     currentFunction: FunctionType
+    currentClass: ClassType
 
   FunctionType = enum
-    NONE, FUNCTION
+    NONE, FUNCTION, INITIALIZER, METHOD
+
+  ClassType {.pure.} = enum
+    NONE, CLASS
 
 proc newResolver*(i: Interpreter): Resolver =
-  Resolver(interpreter: i, currentFunction: NONE)
+  Resolver(interpreter: i, currentFunction: NONE, currentClass: ClassType.NONE)
 
 method resolve(self: var Resolver, stmt: Stmt) {.base.} = discard
 method resolve(self: var Resolver, expr: Expr) {.base.} = discard
@@ -101,11 +105,32 @@ method resolve(self: var Resolver, stmt: PrintStmt) =
 method resolve(self: var Resolver, stmt: ReturnStmt) =
   if (currentFunction == NONE):
     error.error(stmt.keyword, "Cannot return from top-level code.")
-  if stmt.value != nil: resolve(stmt.value)
+  if stmt.value != nil:
+    if currentFunction == INITIALIZER:
+      error.error(stmt.keyword, "Cannot return a value from an initializer.")
+    resolve(stmt.value)
 
 method resolve(self: var Resolver, stmt: WhileStmt) =
   resolve(stmt.condition)
   resolve(stmt.body)
+
+method resolve(self: var Resolver, stmt: ClassStmt) =
+  var enclosingClass = currentClass
+  currentClass = ClassType.CLASS
+  declare(stmt.name)
+  define(stmt.name)
+
+  beginScope()
+  scopes[scopes.len-1].add("this", true)
+
+  for m in stmt.methods:
+    var declaration = METHOD
+    if m.name.lexeme == "init":
+      declaration = INITIALIZER
+    resolveFunction(m, declaration)
+  
+  endScope()
+  currentClass = enclosingClass
 
 method resolve(self: var Resolver, expr: Binary) =
   resolve(expr.left)
@@ -128,3 +153,15 @@ method resolve(self: var Resolver, expr: Logical) =
 
 method resolve(self: var Resolver, expr: Unary) =
   resolve(expr.right)
+
+method resolve(self: var Resolver, expr: GetExpr) =
+  resolve(expr.obj)
+
+method resolve(self: var Resolver, expr: SetExpr) =
+  resolve(expr.value)
+  resolve(expr.obj)
+
+method resolve(self: var Resolver, expr: ThisExpr) =
+  if currentClass == ClassType.NONE:
+    error.error(expr.keyword, "Cannot use 'this' outside of a class.")
+  resolveLocal(expr, expr.keyword)

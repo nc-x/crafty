@@ -7,6 +7,10 @@ type
   BlockStmt* = ref object of Stmt
     statements*: seq[Stmt]
 
+  ClassStmt* = ref object of Stmt
+    name*: Token
+    methods*: seq[FuncStmt]
+
   ExprStmt* = ref object of Stmt
     expression*: Expr
 
@@ -37,6 +41,9 @@ type
 
 proc newBlockStmt*(s: seq[Stmt]): BlockStmt =
   return BlockStmt(statements: s)
+
+proc newClassStmt*(n: Token, m: seq[FuncStmt]): ClassStmt =
+  return ClassStmt(name: n, methods: m)
 
 proc newExprStmt*(e: Expr): ExprStmt =
   return ExprStmt(expression: e)
