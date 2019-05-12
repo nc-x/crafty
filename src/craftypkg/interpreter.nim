@@ -3,9 +3,9 @@
 import expr
 import stmt
 import types
-import literaltype
-import tokentype
-import Token
+import literalType
+import tokenType
+import token
 import strutils
 import runtimeerror
 import environment
@@ -42,7 +42,7 @@ proc isTruthy(self: Interpreter, base: BaseType): bool
 proc isEqual(a: BaseType, b: BaseType): bool
 proc checkNumberOperand(self: Interpreter, operator: Token, operand: BaseType)
 proc checkNumberOperands(self: Interpreter, operator: Token, left: BaseType, right: BaseType)
-proc `$`(value: BaseType): string 
+proc `$`(value: BaseType): string
 proc executeBlock(self: Interpreter, statements: seq[Stmt], environment: Environment)
 
 # Proc
@@ -66,7 +66,7 @@ proc findMethod(self: ClassType, instance: ClassInstance, name: string): Functio
 proc get*(self: ClassInstance, name: Token): BaseType =
   if fields.contains(name.lexeme):
     return fields[name.lexeme]
-  
+
   var m = class.findMethod(self, name.lexeme)
   if m != nil: return m
 
@@ -80,7 +80,7 @@ proc set*(self: ClassInstance, name: Token, value: BaseType) =
 proc newClass*(n: string, superclass: ClassType, m: Table[string, Function]): ClassType =
   var c = ClassType(name: n, methods: m)
   c.superclass = superclass
-  c.call = 
+  c.call =
     proc(interpreter: Interpreter, arguments: seq[BaseType]): BaseType =
       var instance = newClassInstance(c)
       var initializer = c.methods.getOrDefault("init", nil)
@@ -90,9 +90,9 @@ proc newClass*(n: string, superclass: ClassType, m: Table[string, Function]): Cl
   c.arity =
     proc(): int =
       var initializer = c.methods.getOrDefault("init", nil)
-      if initializer == nil: return 0      
+      if initializer == nil: return 0
       return initializer.arity()
-  
+
   return c
 
 proc newFuncType*(arity: () -> int, call: (Interpreter, seq[BaseType]) -> BaseType): FuncType =
@@ -103,11 +103,11 @@ proc newFunction*(declaration: FuncStmt, closure: Environment, isInitializer: bo
   f.isInitializer = isInitializer
   f.closure = closure
   f.declaration = declaration
-  f.call = 
+  f.call =
     proc(interpreter: Interpreter, arguments: seq[BaseType]): BaseType =
       var environment = newEnvironment(f.closure)
       for i in 0 ..< f.declaration.parameters.len:
-        environment.define(f.declaration.parameters[i].lexeme, arguments[i]) 
+        environment.define(f.declaration.parameters[i].lexeme, arguments[i])
       try:
         interpreter.executeBlock(f.declaration.body, environment)
       except ReturnException as r:
@@ -140,7 +140,7 @@ method evaluate*(self: Interpreter, expr: Assign): BaseType =
     environment.assignAt(distance, expr.name, value)
   else:
     globals.assign(expr.name, value)
-    
+
   return value
 
 method evaluate*(self: Interpreter, expr: Literal): BaseType =
@@ -175,7 +175,7 @@ method evaluate*(self: Interpreter, expr: Unary): BaseType =
     return newNum(-NumType(right).value)
   else:
     discard
-  
+
   return nil
 
 proc isTruthy(self: Interpreter, base: BaseType): bool =
@@ -183,7 +183,7 @@ proc isTruthy(self: Interpreter, base: BaseType): bool =
     return false
   if base of BoolType:
     return BoolType(base).value
-  return true 
+  return true
 
 method evaluate*(self: Interpreter, expr: Binary): BaseType =
     var left = evaluate(expr.left)
@@ -220,18 +220,18 @@ method evaluate*(self: Interpreter, expr: Binary): BaseType =
         return newNum(NumType(left).value + NumType(right).value)
       if left of StrType and right of StrType:
         return newStr(StrType(left).value & StrType(right).value)
-      raise newRuntimeError(expr.operator, "Operands must be either two number or two strings.")    
+      raise newRuntimeError(expr.operator, "Operands must be either two number or two strings.")
     else:
       discard
-    
+
     return nil
-    
+
 proc isEqual(a: BaseType, b: BaseType): bool =
   if a of NilType and b of NilType: return true
 
   if a of BoolType and b of BoolType:
     return BoolType(a).value == BoolType(b).value
-  
+
   if a of NumType and b of NumType:
     return NumType(a).value == NumType(b).value
 
@@ -255,7 +255,7 @@ method evaluate*(self: Interpreter, expr: Call): BaseType =
   var arguments: seq[BaseType]
   for argument in expr.arguments:
     arguments.add(self.evaluate(argument))
-  
+
   if not(callee of FuncType):
     raise newRuntimeError(expr.paren, "Can only call functions and classes.")
 
@@ -278,7 +278,7 @@ method evaluate*(self: Interpreter, expr: GetExpr): BaseType =
     var obj = evaluate(expr.obj)
     if obj of ClassInstance:
       return ClassInstance(obj).get(expr.name)
-    
+
     raise newRuntimeError(expr.name, "Only instances have properties.")
 
 method evaluate*(self: Interpreter, expr: SetExpr): BaseType =
@@ -333,7 +333,7 @@ method evaluate*(self: Interpreter, stmt: VarStmt) =
   var value: BaseType = nil
   if stmt.initializer != nil:
     value = evaluate(stmt.initializer)
-  
+
   environment.define(stmt.name.lexeme, value)
 
 method evaluate*(self: Interpreter, stmt: WhileStmt) =
@@ -360,10 +360,10 @@ method evaluate*(self: Interpreter, stmt: ClassStmt) =
       methods.add(m.name.lexeme, function)
 
     var class = newClass(stmt.name.lexeme, ClassType(superclass), methods)
-    
+
     if superclass != nil:
       environment = environment.enclosing
-    
+
     environment.assign(stmt.name, class)
 
 method evaluate*(self: Interpreter, stmt: BlockStmt) =
@@ -393,10 +393,10 @@ proc `$`(value: BaseType): string =
     if text.endsWith(".0"):
       text = text[0 .. ^3]
     return text
-  
+
   if value of StrType:
     return StrType(value).value
-  
+
   if value of BoolType:
     return $BoolType(value).value
 

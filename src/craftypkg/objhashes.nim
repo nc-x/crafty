@@ -1,4 +1,4 @@
-import expr, hashes, literaltype, token
+import expr, hashes, literalType, token
 
 method hash*(x: Expr): Hash {.base.} = discard
 
