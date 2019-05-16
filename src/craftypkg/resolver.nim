@@ -7,7 +7,7 @@ import token
 import error
 import objhashes
 import interpreterObj
-import literaltype
+import literalType
 
 type
   Resolver* = ref object of RootObj
@@ -137,7 +137,7 @@ method resolve(self: var Resolver, stmt: ClassStmt) =
     if m.name.lexeme == "init":
       declaration = INITIALIZER
     resolveFunction(m, declaration)
-  
+
   endScope()
 
   if stmt.superclass != nil: endScope()

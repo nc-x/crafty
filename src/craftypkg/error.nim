@@ -1,7 +1,7 @@
 import strformat
 
 import token
-import tokentype
+import tokenType
 
 var hadError* = false
 

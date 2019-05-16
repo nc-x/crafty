@@ -1,9 +1,9 @@
 {.this: self.}
 
 import token
-import tokentype
+import tokenType
 import expr
-import literaltype
+import literalType
 import stmt
 from error import nil
 
@@ -84,7 +84,7 @@ proc assignment(self: var Parser): Expr =
     elif expr of GetExpr:
       var get = GetExpr(expr)
       return newSetExpr(get.obj, get.name, value)
-    
+
     error.error(equals, "Invalid assignment target.")
 
   return expr
@@ -94,7 +94,7 @@ proc expression(self: var Parser): Expr =
 
 proc equality(self: var Parser): Expr =
   var expr = comparison()
-  
+
   while match(BANG_EQUAL, EQUAL_EQUAL):
     var operator = previous()
     var right = comparison()
@@ -107,7 +107,7 @@ proc match(self: var Parser, types: varargs[TokenType]): bool =
     if check(ty):
       discard advance()
       return true
-  
+
   return false
 
 proc check(self: var Parser, tokentype: TokenType): bool =
@@ -144,9 +144,9 @@ proc addition(self: var Parser): Expr =
   while match(MINUS, PLUS):
     var operator = previous()
     var right = multiplication()
-    
+
     expr = newBinary(expr, operator, right)
-  
+
   return expr
 
 
@@ -180,7 +180,7 @@ proc finishCall(self: var Parser, callee: Expr): Expr =
       if arguments.len >= 8:
         error.error(peek(), "Cannot have more than 8 arguments.")
       arguments.add(expression())
-  
+
   var paren = consume(RIGHT_PAREN, "Expect ')' after arguments.")
 
   return newCall(callee, paren, arguments)
@@ -218,12 +218,12 @@ proc primary(self: var Parser): Expr =
 
   if match(IDENTIFIER):
     return newVariable(previous())
-  
+
   if match(LEFT_PAREN):
     var expr = expression()
     discard consume(RIGHT_PAREN, "Expect ')' after expression")
     return newGrouping(expr)
-  
+
   raise error(peek(), "Expect expression.")
 
 proc consume(self: var Parser, tktype: TokenType, message: string): Token =
@@ -292,7 +292,7 @@ proc forStatement(self: var Parser): Stmt =
   var condition: Expr = nil
   if not check(SEMICOLON):
     condition = expression()
-  
+
   discard consume(SEMICOLON, "Expect ';' after loop condition.")
 
   var increment: Expr = nil
@@ -319,7 +319,7 @@ proc returnStatement(self: var Parser): Stmt =
   var value: Expr
   if not check(SEMICOLON):
     value = expression()
-  
+
   discard consume(SEMICOLON, "Expect ';' after return value.")
   return newReturnStmt(keyword, value)
 
@@ -361,7 +361,7 @@ proc function(self: var Parser, kind: string): FuncStmt =
       if parameters.len >= 8:
         error.error(peek(), "Cannot have more than 8 parameters.")
       parameters.add(consume(IDENTIFIER, "Expect parameter name."))
-    
+
   discard consume(RIGHT_PAREN, "Expect ')' after parameters.")
 
   discard consume(LEFT_BRACE, "Expect '{' before " & kind & " body.")
@@ -404,7 +404,7 @@ proc varDeclaration(self: var Parser): Stmt =
     initializer = expression()
   else:
     initializer = nil
-    
+
   discard consume(SEMICOLON, "Expect ';' after variable declaration.")
   return newVarStmt(name, initializer)
 
@@ -413,5 +413,5 @@ proc parse*(self: var Parser): seq[Stmt] =
   var statements: seq[Stmt]
   while not isAtEnd():
     statements.add(declaration())
-  
+
   return statements
